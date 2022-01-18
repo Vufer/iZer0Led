@@ -97,9 +97,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
   for (int i = 0; i < length; i++) {
     //Serial.print((char)payload[i]);
-    if (i >= 0) {
       color += String((char)payload[i]);
-    }
   }
 
   Serial.print(color);
