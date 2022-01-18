@@ -22,7 +22,9 @@ const char* mqttUser = "YourMqttUser";
 const char* mqttPassword = "YourMqttPassword";
 const String ver = "1.0";
 
-String AcceePointName = "iZer0_Led_v:" + ver;
+uint32_t chipId = 0;
+String hostName = "iZer0_Led";
+String AcceePointName = hostName + "_v:" + ver;
 
 WiFiClient espClient;
 PubSubClient pubClient(espClient);
@@ -30,27 +32,26 @@ long lastMsg = 0;
 char msg[50];
 String message = "#000000";
 String lastMessage = "#000000";
-String color = "#000001";
+String color = "";
 int brightness = 30;
 
 // Neopixel Config
 #define NeoPIN 13
-#define NUM_LEDS 80
+#define NUM_LEDS 75
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUM_LEDS, NeoPIN, NEO_RGB + NEO_KHZ800);
 
 void setup() {
+  for(int i=0; i<17; i=i+8) {
+    chipId |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
+  }
+  hostName += "_" + String(chipId);
   Serial.begin(115200);
-
-  // ##############
-  // NeoPixel start
-  //Serial.println();
   readEEPROM();
   setLed(color);
   //strip.setBrightness(brightness);
   strip.begin();
   //strip.show();
-  //setNeoColor("#f3903c");
   delay(100);
 
   // WiFi
@@ -96,8 +97,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   color = "";
 
   for (int i = 0; i < length; i++) {
-    //Serial.print((char)payload[i]);
-      color += String((char)payload[i]);
+    color += String((char)payload[i]);
   }
 
   Serial.print(color);
@@ -154,7 +154,7 @@ void setup_wifi() {
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-
+  WiFi.setHostname(hostName.c_str());
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -202,8 +202,8 @@ void setLed(String json) {
       return;
     }
     if (doc["status"] == 1) {
-      setNeoColor(doc["color"]);
       setNeoBrightness(doc["brightness"]);
+      setNeoColor(doc["color"]);
     } else {
       setNeoColor("#000000");
     }
@@ -236,9 +236,8 @@ void setNeoColor(String value) {
 
   for (int i = 0; i < NUM_LEDS; i++) {
     strip.setPixelColor(i, strip.Color( g, r, b ) );
+    strip.show();
   }
-  strip.show();
-    Serial.println("on.");
 }
 
 void reconnect() {
